@@ -49,7 +49,7 @@ has_diff_comment() { [[ $(gh pr view "$1" -R "$GITHUB_REPO" --json comments -q '
 show_diff_summary() {
   gh pr view "$1" -R "$GITHUB_REPO" --json comments \
     -q '[.comments[].body | select(startswith("## Argo CD Diff Preview"))] | last' \
-    | awk '/^Summary:/{f=1;next} f&&/^```$/{if(++n==2)exit;next} f' | sed 's/^/      /'
+    | awk '/^Summary:/{f=1;next} f&&/^```/{n++;next} f&&n==1' | sed 's/^/      /'
 }
 merged() { [[ $(gh pr view "$1" -R "$GITHUB_REPO" --json state -q .state) == MERGED ]]; }
 merge_pr() { # merge_pr <number> — you merge in the UI, or the script does in AUTO mode
@@ -60,7 +60,7 @@ merge_pr() { # merge_pr <number> — you merge in the UI, or the script does in 
 }
 open_scenario() { # open_scenario <name> -> prints PR summary once diff preview commented
   "$ROOT/scripts/scenario.sh" "$1" | grep '✔' || true
-  local pr; pr=$(pr_for_branch "^feature/$1$")
+  local pr; pr=$(pr_for_branch "^feature/$1$"); [[ -n $pr ]] || die "no open PR for feature/$1"
   until_true "argocd-diff-preview comment on #$pr (GitHub Actions)" 600 has_diff_comment "$pr"
   show_diff_summary "$pr"
   say "full diff: https://github.com/$GITHUB_REPO/pull/$pr"
@@ -108,7 +108,7 @@ promote staging "$F2"
 until_true "staging serving $V2" 300 serves staging "$V2"
 promote staging "$F1"
 until_true "staging rolled back to $V1" 300 serves staging "$V1"
-"$ROOT/scripts/status.sh" | head -5
+"$ROOT/scripts/status.sh" | head -5 || true
 fi
 
 # ===============================================================================
@@ -134,12 +134,11 @@ step "Run Renovate (GitHub Actions)"
 gh workflow run renovate.yaml -R "$GITHUB_REPO"
 sleep 5
 run=$(gh run list -R "$GITHUB_REPO" --workflow renovate.yaml --limit 1 --json databaseId -q '.[0].databaseId')
-say "https://github.com/$GITHUB_REPO/actions/runs/$run"
 gh run watch "$run" -R "$GITHUB_REPO" --exit-status >/dev/null
 gh pr list -R "$GITHUB_REPO" --state open --json number,title,headRefName \
   -q '.[] | select(.headRefName | startswith("renovate/")) | "      #\(.number) \(.title)"'
 
-PR=$(pr_for_branch '^renovate/redis-7')
+PR=$(pr_for_branch '^renovate/redis-7'); [[ -n $PR ]] || die "Renovate opened no redis 7.x PR"
 OLD_REDIS=$(redis_tag dev)
 NEW_REDIS=$(gh pr view "$PR" -R "$GITHUB_REPO" --json title -q .title | sed 's/.* to v//')
 step "Diff preview on the Renovate PR #$PR (redis $OLD_REDIS → $NEW_REDIS)"
@@ -150,7 +149,7 @@ step "Merge it → Kargo turns it into Freight → dev only"
 merge_pr "$PR"
 kargo refresh warehouse dev5 --project dev5 >/dev/null 2>&1 || true
 until_true "dev running redis $NEW_REDIS" 300 runs_redis dev "$NEW_REDIS"
-"$ROOT/scripts/status.sh" | head -5
+"$ROOT/scripts/status.sh" | head -5 || true
 say "staging + prod keep redis $OLD_REDIS until someone promotes it"
 
 step "Promote the upgrade through staging and prod"
@@ -161,6 +160,8 @@ promote prod "$F3"
 until_true "Kargo opened the promotion PR" 120 bash -c "[[ -n \$(gh pr list -R $GITHUB_REPO --state open --json headRefName -q '.[] | select(.headRefName | startswith(\"kargo/promotion/prod\")) | .headRefName') ]]"
 merge_pr "$(pr_for_branch '^kargo/promotion/prod')"
 until_true "prod running redis $NEW_REDIS" 300 runs_redis prod "$NEW_REDIS"
+V3=$(k $M -n dev5 get freight "$F3" -o jsonpath='{.images[0].tag}')
+until_true "prod serving demo-app $V3" 300 serves prod "$V3"
 fi
 
 printf '\n'; "$ROOT/scripts/status.sh"

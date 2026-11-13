@@ -39,7 +39,7 @@ esac
 git -c user.name="A Developer" -c user.email=dev@users.noreply.github.com commit -qam "$TITLE"
 git push -q -f origin "$BRANCH" 2>/dev/null
 
-url=$(gh pr view "$BRANCH" -R "$GITHUB_REPO" --json url -q .url 2>/dev/null || true)
+url=$(gh pr list -R "$GITHUB_REPO" --head "$BRANCH" --state open --json url -q '.[0].url // empty')
 [[ -n $url ]] || url=$(gh pr create -R "$GITHUB_REPO" --head "$BRANCH" --base main --title "$TITLE" --body "$BODY")
 ok "PR: $TITLE → $url"
 echo "    the 'Argo CD Diff Preview' check will comment on it in ~2 min"

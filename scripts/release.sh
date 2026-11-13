@@ -23,7 +23,6 @@ log "Triggering build-image workflow for demo-app $V"
 gh workflow run build-image.yaml -R "$GITHUB_REPO" -f version="$V"
 sleep 5
 run=$(gh run list -R "$GITHUB_REPO" --workflow build-image.yaml --limit 1 --json databaseId -q '.[0].databaseId')
-echo "    https://github.com/$GITHUB_REPO/actions/runs/$run"
 gh run watch "$run" -R "$GITHUB_REPO" --exit-status >/dev/null || die "build failed: gh run view $run -R $GITHUB_REPO --log-failed"
 ok "pushed $IMAGE_REPO:$V"
 kargo refresh warehouse dev5 --project dev5 >/dev/null 2>&1 || true

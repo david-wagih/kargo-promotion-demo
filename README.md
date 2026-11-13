@@ -68,7 +68,8 @@ On a fresh fork:
 
 ```bash
 ./scripts/use-fork.sh <you>/<repo> && git commit -am "use my fork" && git push
-make release V=1.0.0   # first image (GHCR inherits the public repo's visibility)
+git tag -f -a demo-baseline -m "demo day 0" && git push -f origin demo-baseline   # what `make reset` restores
+make release                    # first image, 1.0.0 (GHCR inherits the public repo's visibility)
 make up
 ```
 
@@ -83,18 +84,34 @@ this one repo.
 | The app dev / staging / prod | http://localhost:9081 / 9082 / 9083 | – |
 | PRs, Actions, env branches | https://github.com/david-wagih/kargo-promotion-demo | – |
 
-## Demo script (~20 min)
+## Demo script (~25 min)
 
-> Before the talk: `make reset` (close demo PRs, re-init env branches, fresh
-> Kargo project). Open Kargo, the three app URLs, and the repo's *Pull requests*
-> and *Actions* tabs.
+The whole demo is scripted and reproducible:
+
+```bash
+make reset      # day 0: closes demo PRs, resets env branches, restores platform-config/ + app/
+                # from the `demo-baseline` tag, recreates the Kargo project (~2 min)
+make demo       # guided run: pauses before every step and waits for the real outcome
+                # (Freight created, Argo CD synced, diff comment posted, PR merged...)
+make demo ACT=2 # jump to an act
+make rehearse   # unattended dress rehearsal (merges PRs itself), then resets
+```
+
+During `make demo`, the merges are yours: when a step needs one, it prints the PR
+link and waits until you merge it in GitHub. Keep Kargo, the three app URLs, and
+the repo's *Pull requests* and *Actions* tabs open in your browser.
+
+`make release` always builds the **next free version** (1.1.0, 1.2.0, ...), so it
+never collides with images from earlier runs.
+
+The acts below describe what `make demo` does and what to say at each step.
 
 ### Act 1: Kargo replaces the overlay-folder pipeline
 
 1. **Show the starting state:** the newest image is in dev (green page on :9081), and
    staging/prod are empty. Show `kargo/`: that's the entire pipeline, with **one**
    `PromotionTask` reused by all three envs.
-2. **CI ships a new build:** `make release V=1.1.0`. This runs the `build-image` Action
+2. **CI ships a new build:** `make release`. This runs the `build-image` Action
    and pushes to GHCR. A new Freight appears in Kargo, and dev auto-promotes. Show the
    `kargo-bot` commit on `env/dev`. It's plain rendered YAML, and the commit message
    names the Freight.
@@ -106,8 +123,9 @@ this one repo.
    merges. Merge it, and prod turns blue on :9083.
 5. **Show the guardrail:** promoting dev-only Freight straight to prod fails with
    *"Freight … is not available to Stage prod"*.
-6. **Roll back:** promote an older Freight to staging. That's the whole rollback.
-   (Use staging: dev auto-promotes, so it would move forward again.)
+6. **Roll back:** after a second release reaches staging, promote the older Freight
+   to staging again. That's the whole rollback. (Use staging: dev auto-promotes, so
+   it would move forward again.)
 
 ### Act 2: catch problems before merge with argocd-diff-preview
 
@@ -174,5 +192,6 @@ renovate.json           Renovate config (kustomize + Dockerfile managers; our ow
 | `unable to create session key: disk quota exceeded` | Rootless podman VM keyring limit. `00-prereqs.sh` raises `kernel.keys.maxkeys`. |
 | `kind get clusters` errors on podman 6 | Known kind/podman label-format incompatibility. The scripts avoid this command. |
 | Renovate PRs show an extra "action_required" diff-preview run | Expected. GitHub doesn't run `pull_request` workflows for bot-token PRs, so the Renovate workflow dispatches the diff preview instead, and that run is the one that comments. |
+| Renovate opens no redis PR after a reset | `renovate.json` needs `"recreateWhen": "always"`. Without it, Renovate won't reopen a PR it has seen closed. |
 | prod promotion stays *Running* | It's waiting for its GitHub PR to be merged; that's the gate. |
 | A stage looks stuck | `kubectl --context kind-mgmt -n dev5 get promotions`, or open the promotion in the Kargo UI for step-by-step logs. |
