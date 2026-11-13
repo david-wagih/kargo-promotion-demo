@@ -23,7 +23,7 @@ spec:
         envFrom:
         - configMapRef:
             name: demo-app-config-5888g28988
-        image: ghcr.io/david-wagih/demo-app:1.1.0
+        image: ghcr.io/david-wagih/demo-app:1.2.0
         name: demo-app
         ports:
         - containerPort: 8080
