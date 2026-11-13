@@ -17,8 +17,14 @@ up:  ## create local clusters + Argo CD + Kargo and wire them to GitHub (~10 min
 status:  ## what runs where + all URLs
 	@$(S)/status.sh
 
-release:  ## GitHub Actions builds + pushes a new image: make release V=1.1.0
-	@test -n "$(V)" || (echo "usage: make release V=1.1.0" && exit 1)
+demo:  ## guided demo, pauses before each step (ACT=2 to start at act 2)
+	$(S)/demo.sh $(or $(ACT),1)
+
+rehearse:  ## unattended full run of the demo (merges PRs itself), then reset
+	AUTO=1 $(S)/demo.sh
+	$(S)/reset.sh
+
+release:  ## GitHub Actions builds + pushes the next image version (or V=2.0.0)
 	$(S)/release.sh $(V)
 
 promote:  ## promote what's in the upstream stage: make promote TO=staging|prod
@@ -38,4 +44,4 @@ reset:  ## back to day 0 (keeps clusters)
 down:  ## delete local clusters
 	$(S)/down.sh
 
-.PHONY: help up status release promote scenario renovate reset down
+.PHONY: help up status demo rehearse release promote scenario renovate reset down

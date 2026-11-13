@@ -3,6 +3,7 @@
   "extends": ["config:recommended"],
   "enabledManagers": ["kustomize", "dockerfile"],
   "dependencyDashboard": false,
+  "recreateWhen": "always",
   "prHourlyLimit": 0,
   "prConcurrentLimit": 0,
   "labels": ["dependencies"],
