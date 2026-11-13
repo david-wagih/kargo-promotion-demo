@@ -14,4 +14,4 @@ configMapGenerator:
     literals:
       - ENV_NAME=dev
       - BANNER_COLOR=#2e7d32
-      - GREETING=deployed to the dev cluster
+      - GREETING=dev — now with extra sparkle ✨
