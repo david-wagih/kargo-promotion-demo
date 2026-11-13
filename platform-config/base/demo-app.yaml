@@ -23,6 +23,8 @@ spec:
           env:
             - name: REDIS_URL
               value: redis://redis:6379
+            - name: FEATURE_NEW_CHECKOUT
+              value: "true"
           readinessProbe:
             httpGet:
               path: /healthz
