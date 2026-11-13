@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: demo-app
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: dev5
+resources:
+  - namespace.yaml
+  - demo-app.yaml
+  - redis.yaml
+configMapGenerator:
+  - name: demo-app-config
+    literals:
+      - ENV_NAME=unknown
+      - BANNER_COLOR=#555555
+      - GREETING=hello
+# Third-party images are pinned here and kept up to date by Renovate.
+# demo-app's own tag is NOT stored here: Kargo stamps it per environment at
+# promotion time (see kargo/promotion-task.yaml in the demo repo).
+images:
+  - name: redis
+    newTag: 7.2.4

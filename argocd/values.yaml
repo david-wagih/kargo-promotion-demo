@@ -1,0 +1,14 @@
+# Lean Argo CD for a laptop: one per env cluster.
+dex:
+  enabled: false
+notifications:
+  enabled: false
+configs:
+  params:
+    server.insecure: true
+  cm:
+    timeout.reconciliation: 20s   # demo: notice env-repo commits quickly
+server:
+  service:
+    type: NodePort
+    nodePortHttp: 30080

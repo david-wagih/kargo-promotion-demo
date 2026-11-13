@@ -1,0 +1,10 @@
+server {
+  listen 8080;
+  location = /healthz { return 200 "ok\n"; }
+  location / {
+    default_type text/html;
+    return 200 '<!doctype html><html><body style="margin:0;font-family:system-ui;background:${BANNER_COLOR};color:#fff;text-align:center;padding-top:18vh">
+<h1 style="font-size:4rem;margin:0">demo-app ${APP_VERSION}</h1>
+<h2 style="font-weight:400">environment: <b>${ENV_NAME}</b></h2><p>${GREETING}</p></body></html>';
+  }
+}

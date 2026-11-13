@@ -1,0 +1,38 @@
+# Renovate on GitHub Actions: opens upgrade PRs for third-party images in
+# platform-config/ (and the app's base image), then asks for a diff preview on each.
+name: renovate
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1-5"
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: write      # to dispatch the diff-preview workflow
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: renovatebot/github-action@v46.3.13
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          RENOVATE_ONBOARDING: "false"
+          RENOVATE_REQUIRE_CONFIG: required
+          RENOVATE_GIT_AUTHOR: "renovate-bot <renovate-bot@users.noreply.github.com>"
+          LOG_LEVEL: info
+
+      - name: Request a diff preview for every open Renovate PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for pr in $(gh pr list --repo ${{ github.repository }} --state open --json number,headRefName \
+                        -q '.[] | select(.headRefName | startswith("renovate/")) | .number'); do
+            echo "dispatching diff preview for #$pr"
+            gh workflow run argocd-diff-preview.yaml --repo ${{ github.repository }} -f pr="$pr"
+          done

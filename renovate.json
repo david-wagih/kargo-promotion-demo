@@ -1,0 +1,21 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "enabledManagers": ["kustomize", "dockerfile"],
+  "dependencyDashboard": false,
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 0,
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Our own image is promoted by Kargo, never bumped by Renovate",
+      "matchPackageNames": ["ghcr.io/david-wagih/demo-app"],
+      "enabled": false
+    },
+    {
+      "description": "Majors get a label so reviewers read the Argo CD diff preview carefully",
+      "matchUpdateTypes": ["major"],
+      "addLabels": ["major-upgrade"]
+    }
+  ]
+}

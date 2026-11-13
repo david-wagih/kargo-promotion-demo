@@ -1,0 +1,61 @@
+# Every PR that touches platform-config/ gets a comment with the *rendered* diff
+# for dev / staging / prod — before anything is merged or promoted.
+name: Argo CD Diff Preview
+
+on:
+  pull_request:
+    branches: [main]
+    paths: ["platform-config/**"]
+  # Renovate runs with GITHUB_TOKEN, whose PRs don't trigger pull_request workflows,
+  # so the renovate workflow dispatches this one explicitly.
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Pull request number
+        required: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: diff-preview-${{ github.event.pull_request.number || inputs.pr }}
+  cancel-in-progress: true
+
+env:
+  PR: ${{ github.event.pull_request.number || inputs.pr }}
+
+jobs:
+  diff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/pull/${{ env.PR }}/merge
+          path: pull-request
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          path: main
+
+      - name: Render both branches with an ephemeral Argo CD and diff them
+        run: |
+          docker run \
+            --network=host \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v $(pwd)/main:/base-branch \
+            -v $(pwd)/pull-request:/target-branch \
+            -v $(pwd)/output:/output \
+            -e TARGET_BRANCH=refs/pull/$PR/merge \
+            -e REPO=${{ github.repository }} \
+            -e FILE_REGEX='platform-config/argocd-preview/' \
+            -e TITLE='Argo CD Diff Preview — dev / staging / prod' \
+            dagandersen/argocd-diff-preview:v0.2.17
+
+      - name: Post diff as PR comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cat output/diff.md >> "$GITHUB_STEP_SUMMARY"
+          gh pr comment "$PR" --repo ${{ github.repository }} --body-file output/diff.md --edit-last \
+            || gh pr comment "$PR" --repo ${{ github.repository }} --body-file output/diff.md

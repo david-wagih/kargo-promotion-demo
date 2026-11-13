@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+labels:
+  - pairs:
+      env: staging
+replicas:
+  - name: demo-app
+    count: 2
+configMapGenerator:
+  - name: demo-app-config
+    behavior: merge
+    literals:
+      - ENV_NAME=staging
+      - BANNER_COLOR=#ef6c00
+      - GREETING=deployed to the staging cluster
+patches:
+  - path: resources-patch.yaml

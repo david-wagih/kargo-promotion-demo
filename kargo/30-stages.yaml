@@ -1,0 +1,69 @@
+# dev     <- straight from the Warehouse, auto-promoted
+# staging <- only Freight that already succeeded in dev
+# prod    <- only Freight that already succeeded in staging, via a GitHub PR on env/prod
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: dev
+  namespace: dev5
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: dev5
+      sources:
+        direct: true
+  promotionTemplate:
+    spec:
+      steps:
+        - task:
+            name: render-and-push
+          vars:
+            - name: env
+              value: dev
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: staging
+  namespace: dev5
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: dev5
+      sources:
+        stages:
+          - dev
+  promotionTemplate:
+    spec:
+      steps:
+        - task:
+            name: render-and-push
+          vars:
+            - name: env
+              value: staging
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: prod
+  namespace: dev5
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: dev5
+      sources:
+        stages:
+          - staging
+  promotionTemplate:
+    spec:
+      steps:
+        - task:
+            name: render-and-push
+          vars:
+            - name: env
+              value: prod
+            - name: viaPullRequest
+              value: "true"

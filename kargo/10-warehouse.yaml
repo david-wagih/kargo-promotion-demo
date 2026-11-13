@@ -1,0 +1,22 @@
+# The Warehouse watches BOTH things that can change what runs:
+#   1. the demo-app image on GHCR (built by .github/workflows/build-image.yaml)
+#   2. platform-config/ on main (config changes, Renovate upgrades, ...)
+# Every new combination becomes an immutable, versioned "Freight".
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: dev5
+  namespace: dev5
+spec:
+  interval: 15s
+  subscriptions:
+    - image:
+        repoURL: ghcr.io/david-wagih/demo-app
+        constraint: ">=1.0.0"
+        discoveryLimit: 10
+    - git:
+        repoURL: https://github.com/david-wagih/kargo-promotion-demo.git
+        branch: main
+        includePaths:
+          - platform-config/base
+          - platform-config/overlays

@@ -1,0 +1,95 @@
+# ONE reusable promotion recipe for every environment.
+# This replaces the "which overlay folder changed? -> push to which repo?" pipeline.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionTask
+metadata:
+  name: render-and-push
+  namespace: dev5
+spec:
+  vars:
+    - name: env                       # required: dev | staging | prod
+    - name: viaPullRequest            # "true" = open a GitHub PR and wait for a human to merge it
+      value: "false"
+    - name: repo
+      value: https://github.com/david-wagih/kargo-promotion-demo.git
+    - name: imageRepo
+      value: ghcr.io/david-wagih/demo-app
+  steps:
+    # 1. the exact config commit inside this Freight (not "latest main"!)
+    - uses: git-clone
+      config:
+        repoURL: ${{ vars.repo }}
+        checkout:
+          - commit: ${{ commitFrom(vars.repo).ID }}
+            path: ./src
+    # 2. the env branch this environment's Argo CD is watching
+    - uses: git-clone
+      config:
+        repoURL: ${{ vars.repo }}
+        author:
+          name: kargo-bot
+          email: kargo-bot@users.noreply.github.com
+        checkout:
+          - branch: env/${{ vars.env }}
+            path: ./out
+    - uses: git-clear
+      config:
+        path: ./out/manifests
+    # 3. stamp the exact image tag inside this Freight into the env overlay
+    - uses: kustomize-set-image
+      config:
+        path: ./src/platform-config/overlays/${{ vars.env }}
+        images:
+          - image: ${{ vars.imageRepo }}
+            tag: ${{ imageFrom(vars.imageRepo).Tag }}
+    # 4. render plain YAML (rendered-manifests pattern: env branches are reviewable, diffable)
+    - uses: kustomize-build
+      config:
+        path: ./src/platform-config/overlays/${{ vars.env }}
+        outPath: ./out/manifests
+    - uses: git-commit
+      config:
+        path: ./out
+        message: |-
+          promote ${{ vars.env }}: demo-app ${{ imageFrom(vars.imageRepo).Tag }}, config ${{ commitFrom(vars.repo).ID[0:7] }}
+
+          Kargo-Freight: ${{ ctx.targetFreight.alias }} (${{ ctx.targetFreight.name }})
+          Kargo-Promotion: ${{ ctx.promotion }}
+
+    # 5a. dev / staging: push straight to the env branch
+    - uses: git-push
+      if: ${{ vars.viaPullRequest != "true" }}
+      config:
+        path: ./out
+    # 5b. prod: push a promotion branch, open a PR against env/prod, wait for the merge
+    - uses: git-push
+      as: push-pr
+      if: ${{ vars.viaPullRequest == "true" }}
+      config:
+        path: ./out
+        generateTargetBranch: true
+    - uses: git-open-pr
+      as: open-pr
+      if: ${{ vars.viaPullRequest == "true" }}
+      config:
+        repoURL: ${{ vars.repo }}
+        sourceBranch: ${{ task.outputs['push-pr'].branch }}
+        targetBranch: env/${{ vars.env }}
+        title: "Promote ${{ ctx.targetFreight.alias }} to ${{ vars.env }}: demo-app ${{ imageFrom(vars.imageRepo).Tag }}"
+        description: |-
+          Opened by **Kargo**. Merging this PR deploys to **${{ vars.env }}**.
+
+          | | |
+          |---|---|
+          | Freight | `${{ ctx.targetFreight.alias }}` |
+          | demo-app image | `${{ imageFrom(vars.imageRepo).Tag }}` |
+          | platform-config commit | ${{ commitFrom(vars.repo).ID }} |
+
+          The *Files changed* tab is the exact rendered YAML the ${{ vars.env }} Argo CD will apply.
+        labels:
+          - kargo-promotion
+    - uses: git-wait-for-pr
+      if: ${{ vars.viaPullRequest == "true" }}
+      config:
+        repoURL: ${{ vars.repo }}
+        prNumber: ${{ task.outputs['open-pr'].pr.id }}
