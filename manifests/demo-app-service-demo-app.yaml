@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/part-of: dev5
+    env: prod
+  name: demo-app
+  namespace: demo-app
+spec:
+  ports:
+  - nodePort: 30090
+    port: 80
+    targetPort: 8080
+  selector:
+    app: demo-app
+  type: NodePort
