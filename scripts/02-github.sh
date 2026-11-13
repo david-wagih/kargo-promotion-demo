@@ -17,7 +17,7 @@ for env in "${ENV_CLUSTERS[@]}"; do
   printf '# env/%s\n\nRendered manifests for **%s**, watched by the %s cluster'"'"'s Argo CD.\nWritten only by Kargo — do not edit by hand.\n' "$env" "$env" "$env" > "$tmp/README.md"
   git -C "$tmp" add -A
   git -C "$tmp" -c user.name=kargo-bot -c user.email=kargo-bot@users.noreply.github.com commit -qm "Initialize env/$env"
-  git -C "$tmp" push -q "https://x-access-token:$(github_token)@github.com/$GITHUB_REPO.git" "env/$env"
+  git -C "$tmp" push -q "https://x-access-token:$(github_token)@github.com/$GITHUB_REPO.git" "env/$env" 2>/dev/null
   rm -rf "$tmp"
   ok "branch env/$env created"
 done
@@ -26,7 +26,11 @@ gh api -X PUT "repos/$GITHUB_REPO/actions/permissions/workflow" \
   -f default_workflow_permissions=write -F can_approve_pull_request_reviews=true >/dev/null
 ok "GitHub Actions may open PRs (needed by the Renovate workflow)"
 
-if curl -fsS "https://ghcr.io/token?scope=repository:${IMAGE_REPO#ghcr.io/}:pull" >/dev/null 2>&1; then
+ghcr_tags() {
+  local t; t=$(curl -fsS "https://ghcr.io/token?scope=repository:${IMAGE_REPO#ghcr.io/}:pull" | jq -r .token) || return 1
+  curl -fsS -H "Authorization: Bearer $t" "https://ghcr.io/v2/${IMAGE_REPO#ghcr.io/}/tags/list" | jq -e '.tags | length > 0' >/dev/null
+}
+if ghcr_tags 2>/dev/null; then
   ok "image $IMAGE_REPO is public"
 else
   warn "image $IMAGE_REPO not public yet — run 'make release V=1.0.0', then set the package to Public:"
