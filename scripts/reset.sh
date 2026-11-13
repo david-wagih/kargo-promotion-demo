@@ -42,10 +42,12 @@ fi
 # so wipe the workloads directly.
 log "Removing demo-app from every env cluster"
 for env in "${ENV_CLUSTERS[@]}"; do k "$env" delete ns demo-app --ignore-not-found --wait=false >/dev/null; done
+for env in "${ENV_CLUSTERS[@]}"; do k "$env" wait --for=delete ns/demo-app --timeout=180s >/dev/null 2>&1 || true; done
 
 "$ROOT/scripts/05-pipeline.sh"
 
 log "Waiting for Kargo to auto-promote the first Freight to dev"
+wait_for "dev Freight" bash -c "[[ -n \$(kubectl --context kind-$MGMT_CLUSTER -n dev5 get stage dev -o jsonpath='{.status.freightHistory[0].items}') ]]"
 wait_for "dev to be serving" bash -c "curl -fs http://localhost:$(app_port dev)/ | grep -q demo-app"
 "$ROOT/scripts/status.sh"
 ok "demo reset to day 0"
