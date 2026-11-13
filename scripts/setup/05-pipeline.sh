@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Applies the dev5 Kargo pipeline: Project, GitHub credentials, Warehouse, PromotionTask, Stages.
-source "$(dirname "$0")/lib.sh"
+source "$(dirname "$0")/../lib.sh"
 M=$MGMT_CLUSTER
 
 log "Applying the dev5 pipeline (Project, Warehouse, PromotionTask, Stages)"

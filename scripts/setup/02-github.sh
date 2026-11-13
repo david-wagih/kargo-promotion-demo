@@ -3,7 +3,7 @@
 #   - env/dev, env/staging, env/prod branches = the per-environment config "repos"
 #     (each cluster's Argo CD watches exactly one of them; only Kargo writes to them)
 #   - lets GitHub Actions open PRs (Renovate runs with the workflow's GITHUB_TOKEN)
-source "$(dirname "$0")/lib.sh"
+source "$(dirname "$0")/../lib.sh"
 
 gh api "repos/$GITHUB_REPO" --jq .default_branch >/dev/null || die "repo $GITHUB_REPO not reachable"
 [[ -n $(gh api "repos/$GITHUB_REPO/branches/main" --jq .name 2>/dev/null) ]] \

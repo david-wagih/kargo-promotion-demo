@@ -6,12 +6,12 @@ help:  ## show targets
 	@grep -E '^[a-z0-9-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
 
 up:  ## create local clusters + Argo CD + Kargo and wire them to GitHub (~10 min first time)
-	$(S)/00-prereqs.sh
-	$(S)/01-clusters.sh
-	$(S)/02-github.sh
-	$(S)/03-argocd.sh
-	$(S)/04-kargo.sh
-	$(S)/05-pipeline.sh
+	$(S)/setup/00-prereqs.sh
+	$(S)/setup/01-clusters.sh
+	$(S)/setup/02-github.sh
+	$(S)/setup/03-argocd.sh
+	$(S)/setup/04-kargo.sh
+	$(S)/setup/05-pipeline.sh
 	@echo; $(S)/status.sh
 
 status:  ## what runs where + all URLs

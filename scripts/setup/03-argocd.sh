@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Installs an independent Argo CD into each env cluster (dev / staging / prod) and
 # points it at *its own* env branch — exactly like one Argo CD per cluster today.
-source "$(dirname "$0")/lib.sh"
+source "$(dirname "$0")/../lib.sh"
 
 helm repo add argo https://argoproj.github.io/argo-helm >/dev/null 2>&1 || true
 helm repo update argo >/dev/null

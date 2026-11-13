@@ -176,20 +176,29 @@ diffs them.
 ## Layout
 
 ```
-.github/workflows/      build-image, argocd-diff-preview, renovate
-kargo/                  the whole promotion pipeline (Project, Warehouse, PromotionTask, Stages)
-platform-config/        base + overlays + argocd-preview Applications (what diff-preview renders)
-argocd/                 per-cluster Argo CD values + the single Application each cluster watches
-app/                    demo-app image (nginx printing version + env)
-scripts/                00-05 setup, release, scenario, status, reset, down, use-fork
-renovate.json           Renovate config (kustomize + Dockerfile managers; our own image excluded)
+.github/workflows/        build-image (→ GHCR), argocd-diff-preview (PR comments), renovate (scheduled)
+platform-config/          the config repo: base/, overlays/{dev,staging,prod}/, argocd-preview/
+kargo/                    the whole promotion pipeline: Project, Warehouse, PromotionTask, Stages
+argocd/                   per-cluster Argo CD Helm values + the one Application each cluster watches
+app/                      demo-app image (nginx printing its version + environment)
+scripts/
+  setup/00-05-*.sh        one-time setup, run in order by `make up`
+  demo.sh                 guided demo runner (`make demo`, `make rehearse`)
+  release.sh              trigger an image build on GitHub Actions (`make release`)
+  scenario.sh             open a "bad" or good PR for the diff-preview act (`make scenario`)
+  status.sh / reset.sh / down.sh / use-fork.sh
+  lib.sh                  shared settings (repo, ports, passwords, versions)
+renovate.json             Renovate config (kustomize + Dockerfile; our own image excluded)
+Makefile                  entry point: `make help`
 ```
+
+Local-only and git-ignored: `bin/` (the kargo CLI) and `.generated/` (signing key, kind configs).
 
 ## Troubleshooting
 
 | Symptom | Cause / fix |
 |---|---|
-| `unable to create session key: disk quota exceeded` | Rootless podman VM keyring limit. `00-prereqs.sh` raises `kernel.keys.maxkeys`. |
+| `unable to create session key: disk quota exceeded` | Rootless podman VM keyring limit. `scripts/setup/00-prereqs.sh` raises `kernel.keys.maxkeys`. |
 | `kind get clusters` errors on podman 6 | Known kind/podman label-format incompatibility. The scripts avoid this command. |
 | Renovate PRs show an extra "action_required" diff-preview run | Expected. GitHub doesn't run `pull_request` workflows for bot-token PRs, so the Renovate workflow dispatches the diff preview instead, and that run is the one that comments. |
 | Renovate opens no redis PR after a reset | `renovate.json` needs `"recreateWhen": "always"`. Without it, Renovate won't reopen a PR it has seen closed. |

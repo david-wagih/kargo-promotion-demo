@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Checks required tools and downloads the kargo CLI into ./bin
-source "$(dirname "$0")/lib.sh"
+source "$(dirname "$0")/../lib.sh"
 
 log "Checking required tools"
 for t in kind kubectl helm git gh curl jq openssl; do

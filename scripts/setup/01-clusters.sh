@@ -2,7 +2,7 @@
 # Creates 4 kind clusters:
 #   mgmt                 -> Kargo control plane
 #   dev / staging / prod -> one cluster + one Argo CD each
-source "$(dirname "$0")/lib.sh"
+source "$(dirname "$0")/../lib.sh"
 
 create_cluster() { # name [hostPort:containerPort ...]
   local name=$1; shift

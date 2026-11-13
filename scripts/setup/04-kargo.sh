@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Installs cert-manager + Kargo into the mgmt cluster.
-source "$(dirname "$0")/lib.sh"
+source "$(dirname "$0")/../lib.sh"
 M=$MGMT_CLUSTER
 
 log "Installing cert-manager into '$M'"
