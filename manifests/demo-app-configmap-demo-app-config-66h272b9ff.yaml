@@ -1,0 +1,12 @@
+apiVersion: v1
+data:
+  BANNER_COLOR: '#2e7d32'
+  ENV_NAME: dev
+  GREETING: deployed to the dev cluster
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/part-of: dev5
+    env: dev
+  name: demo-app-config-66h272b9ff
+  namespace: demo-app
