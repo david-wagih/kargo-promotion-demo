@@ -1,0 +1,7 @@
+apiVersion: v2
+name: microservice
+description: >-
+  Tiny stand-in for blu-helm-microservice so the demo runs outside Swisscom.
+  Same `app.*` values contract (image, version, port, env, resources, health).
+type: application
+version: 0.1.0

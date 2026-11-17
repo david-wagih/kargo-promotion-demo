@@ -1,0 +1,104 @@
+# ONE reusable promotion recipe for every environment. It does what the
+# cicd/cd promotion component's deploy_<env> job does today:
+#   config-tde-dev5 (source) --render--> config-tde-dev5-<env> (env repo) --> Argo CD
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionTask
+metadata:
+  name: render-and-push
+  namespace: dev5
+spec:
+  vars:
+    - name: env                       # required: dev | staging | prod
+    - name: viaMergeRequest           # "true" = manual-promotion: open an MR, wait for the merge
+      value: "false"
+    - name: group
+      value: __GITLAB_GROUP__
+    - name: source
+      value: https://gitlab.com/__GITLAB_GROUP__/config-tde-dev5.git
+    - name: imageRepo
+      value: registry.gitlab.com/__GITLAB_GROUP__/demo-app
+  steps:
+    # 1. the exact config commit inside this Freight (not "latest main"!)
+    - uses: git-clone
+      config:
+        repoURL: ${{ vars.source }}
+        checkout:
+          - commit: ${{ commitFrom(vars.source).ID }}
+            path: ./src
+    # 2. the env repo this environment's Argo CD watches (config-tde-dev5-<env>)
+    - uses: git-clone
+      config:
+        repoURL: https://gitlab.com/${{ vars.group }}/config-tde-dev5-${{ vars.env }}.git
+        author:
+          name: kargo-bot
+          email: kargo-bot@noreply.gitlab.com
+        checkout:
+          - branch: main
+            path: ./out
+    - uses: git-clear
+      config:
+        path: ./out/apps
+    # 3a. "helm" pattern: shared values + <env>-values, image version from the Freight
+    - uses: helm-template
+      config:
+        path: ./src/charts/microservice
+        releaseName: demo-app
+        valuesFiles:
+          - ./src/apps/demo-app/values.yaml
+          - ./src/apps/demo-app/${{ vars.env }}-values.yaml
+        setValues:
+          - key: app.version
+            value: ${{ imageFrom(vars.imageRepo).Tag }}
+        outPath: ./out/apps/demo-app/manifest.yaml
+    # 3b. "kustomize" pattern: base + overlays/<env>
+    - uses: kustomize-build
+      config:
+        path: ./src/apps/redis/overlays/${{ vars.env }}
+        outPath: ./out/apps/redis/manifest.yaml
+    - uses: git-commit
+      config:
+        path: ./out
+        message: |-
+          Promote ${{ vars.env }}: demo-app ${{ imageFrom(vars.imageRepo).Tag }}, config-tde-dev5 ${{ commitFrom(vars.source).ID[0:8] }}
+
+          Kargo-Freight: ${{ ctx.targetFreight.alias }} (${{ ctx.targetFreight.name }})
+          Kargo-Promotion: ${{ ctx.promotion }}
+
+    # 4a. manual-promotion: false -> push straight to the env repo
+    - uses: git-push
+      if: ${{ vars.viaMergeRequest != "true" }}
+      config:
+        path: ./out
+    # 4b. manual-promotion: true -> promotion branch + MR on the env repo, wait for merge
+    - uses: git-push
+      as: push-mr
+      if: ${{ vars.viaMergeRequest == "true" }}
+      config:
+        path: ./out
+        generateTargetBranch: true
+    - uses: git-open-pr
+      as: open-mr
+      if: ${{ vars.viaMergeRequest == "true" }}
+      config:
+        provider: gitlab
+        repoURL: https://gitlab.com/${{ vars.group }}/config-tde-dev5-${{ vars.env }}.git
+        sourceBranch: ${{ task.outputs['push-mr'].branch }}
+        targetBranch: main
+        title: "Promote ${{ ctx.targetFreight.alias }} to ${{ vars.env }}: demo-app ${{ imageFrom(vars.imageRepo).Tag }}"
+        description: |-
+          Opened by **Kargo**. Merging this MR deploys to **${{ vars.env }}**.
+
+          | | |
+          |---|---|
+          | Freight | `${{ ctx.targetFreight.alias }}` |
+          | demo-app image | `${{ imageFrom(vars.imageRepo).Tag }}` |
+          | config-tde-dev5 commit | ${{ commitFrom(vars.source).ID }} |
+
+          The *Changes* tab is the exact rendered YAML the ${{ vars.env }} Argo CD will apply.
+        labels:
+          - kargo-promotion
+    - uses: git-wait-for-pr
+      if: ${{ vars.viaMergeRequest == "true" }}
+      config:
+        repoURL: https://gitlab.com/${{ vars.group }}/config-tde-dev5-${{ vars.env }}.git
+        prNumber: ${{ task.outputs['open-mr'].pr.id }}

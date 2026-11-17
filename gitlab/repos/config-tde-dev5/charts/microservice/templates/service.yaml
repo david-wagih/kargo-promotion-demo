@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.app.name }}
+  labels:
+    app: {{ .Values.app.name }}
+spec:
+  type: {{ if .Values.app.service.nodePort }}NodePort{{ else }}ClusterIP{{ end }}
+  selector:
+    app: {{ .Values.app.name }}
+  ports:
+    - port: {{ .Values.app.service.port }}
+      targetPort: {{ .Values.app.port }}
+      {{- with .Values.app.service.nodePort }}
+      nodePort: {{ . }}
+      {{- end }}

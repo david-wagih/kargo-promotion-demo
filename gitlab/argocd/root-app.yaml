@@ -1,0 +1,20 @@
+# The ONLY thing this cluster's Argo CD is told about: its own env repo,
+# config-tde-dev5-__ENV__ (app-of-apps over argocd/apps/). It has no idea Kargo exists.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: config-tde-dev5-__ENV__
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://gitlab.com/__GITLAB_GROUP__/config-tde-dev5-__ENV__.git
+    targetRevision: HEAD
+    path: argocd/apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

@@ -1,0 +1,12 @@
+app:
+  replicas: 2
+  env:
+    ENV_NAME: staging
+    BANNER_COLOR: "#ef6c00"
+    GREETING: deployed to the staging cluster
+  resources:
+    requests:
+      cpu: 50m
+      memory: 32Mi
+    limits:
+      memory: 128Mi

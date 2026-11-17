@@ -1,0 +1,12 @@
+app:
+  replicas: 3
+  env:
+    ENV_NAME: prod
+    BANNER_COLOR: "#1565c0"
+    GREETING: deployed to the prod cluster
+  resources:
+    requests:
+      cpu: 50m
+      memory: 32Mi
+    limits:
+      memory: 128Mi

@@ -1,0 +1,22 @@
+# The Warehouse watches BOTH things that change what runs:
+#   1. the demo-app image in the GitLab registry (built by demo-app's .gitlab-ci.yml)
+#   2. config-tde-dev5 main (values changes, Renovate upgrades, chart changes)
+# Every new combination becomes an immutable, versioned "Freight".
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: dev5
+  namespace: dev5
+spec:
+  interval: 15s
+  subscriptions:
+    - image:
+        repoURL: registry.gitlab.com/__GITLAB_GROUP__/demo-app
+        constraint: ">=1.0.0"
+        discoveryLimit: 10
+    - git:
+        repoURL: https://gitlab.com/__GITLAB_GROUP__/config-tde-dev5.git
+        branch: main
+        includePaths:
+          - apps
+          - charts
