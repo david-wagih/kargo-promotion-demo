@@ -12,6 +12,9 @@ It shows three tools that each fix one part of the problem:
 | A YAML diff on `base/` looks harmless, but you can't see what it does to the *rendered* manifests in each env | **argocd-diff-preview** (GitHub Action) | Every PR gets a comment with the real rendered diff for dev, staging, and prod before merge. |
 | Third-party images drift and get bumped by hand | **Renovate** (GitHub Action) | Opens upgrade PRs on a schedule. They get the diff preview, and once merged Kargo promotes them like any other change. |
 
+> **GitLab flavour:** [`gitlab/`](gitlab/README.md) runs the same demo on gitlab.com, shaped like our
+> `config-tde-dev5` → `config-tde-dev5-<env>` repos (helm values + kustomize, MR-gated prod-2).
+
 ## What runs where
 
 | Where | What |

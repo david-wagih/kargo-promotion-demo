@@ -1,0 +1,78 @@
+# config-tde-dev5 pipeline: NO promotion jobs here any more.
+#   real setup: include cicd/cd/promotion -> deploy_dev5 / deploy_prod / deploy_prod-2
+#   this demo : Kargo watches main and promotes (see kargo/ in the demo repo)
+#
+# What stays in GitLab CI is the "shift left" part:
+#   argocd-diff-preview  on every MR (humans and Renovate) -> rendered diff as MR note
+#   renovate             on a schedule / `make renovate`    -> upgrade MRs
+#
+# CI/CD variable (set by `make up`): GITLAB_PAT (api scope), masked.
+
+stages: [diff, deps]
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE =~ /^(api|web)$/ && $RUN_RENOVATE == "true"
+
+argocd-diff-preview:
+  stage: diff
+  image: docker:27
+  services:
+    - docker:27-dind
+  variables:
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_HOST: tcp://docker:2375
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  before_script:
+    - apk add -q curl jq git
+  script:
+    - git clone -q --depth 1 -b "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" "$CI_REPOSITORY_URL" base-branch
+    - git clone -q --depth 1 -b "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME" "$CI_REPOSITORY_URL" target-branch
+    - |
+      docker run --network host \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        -v "$PWD/base-branch:/base-branch" \
+        -v "$PWD/target-branch:/target-branch" \
+        -v "$PWD/output:/output" \
+        -e TARGET_BRANCH="$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME" \
+        -e REPO="$CI_MERGE_REQUEST_PROJECT_PATH" \
+        -e FILE_REGEX='argocd-preview/' \
+        -e TITLE='Argo CD Diff Preview — dev / staging / prod' \
+        dagandersen/argocd-diff-preview:v0.2.17
+    - |
+      # replace the previous preview note so the MR always shows the latest diff
+      NOTES="$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests/$CI_MERGE_REQUEST_IID/notes"
+      for id in $(curl -fsS -H "PRIVATE-TOKEN: $GITLAB_PAT" "$NOTES?per_page=100" \
+                    | jq -r '.[] | select(.body | test("Argo CD Diff Preview")) | .id'); do
+        curl -fsS -X DELETE -H "PRIVATE-TOKEN: $GITLAB_PAT" "$NOTES/$id" >/dev/null
+      done
+      jq -n --rawfile body output/diff.md '{body: $body}' \
+        | curl -fsS -X POST -H "PRIVATE-TOKEN: $GITLAB_PAT" -H "Content-Type: application/json" \
+            --data @- "$NOTES" >/dev/null
+      echo "diff preview posted to !$CI_MERGE_REQUEST_IID"
+  artifacts:
+    paths: [output/]
+    expire_in: 1 week
+
+# On GitLab, MRs opened by Renovate (with a PAT) trigger MR pipelines directly,
+# so they get the diff preview with no extra wiring (GitHub needed a dispatch step).
+renovate:
+  stage: deps
+  image: ghcr.io/renovatebot/renovate:41
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $RUN_RENOVATE == "true"
+  variables:
+    RENOVATE_PLATFORM: gitlab
+    RENOVATE_ENDPOINT: $CI_API_V4_URL
+    RENOVATE_TOKEN: $GITLAB_PAT
+    RENOVATE_REPOSITORIES: "$CI_PROJECT_NAMESPACE/config-tde-dev5,$CI_PROJECT_NAMESPACE/demo-app"
+    RENOVATE_ONBOARDING: "false"
+    RENOVATE_REQUIRE_CONFIG: required
+    RENOVATE_GIT_AUTHOR: "renovate-bot <renovate-bot@noreply.gitlab.com>"
+    LOG_LEVEL: info
+  script:
+    - renovate

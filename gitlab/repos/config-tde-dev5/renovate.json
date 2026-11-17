@@ -1,0 +1,17 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "enabledManagers": ["kustomize"],
+  "dependencyDashboard": false,
+  "recreateWhen": "always",
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 0,
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Majors get a label so reviewers read the Argo CD diff preview carefully",
+      "matchUpdateTypes": ["major"],
+      "addLabels": ["major-upgrade"]
+    }
+  ]
+}

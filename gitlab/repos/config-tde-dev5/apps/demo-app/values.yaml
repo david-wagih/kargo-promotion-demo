@@ -1,0 +1,17 @@
+# Shared by every environment (same role as apps/<app>/values.yaml in config-tde-dev5).
+# Anything here lands in dev, staging AND prod.
+app:
+  name: demo-app
+  image: registry.gitlab.com/__GITLAB_GROUP__/demo-app   # real: *.artifactory.swisscom.com
+  port: 8080
+  env:
+    TZ: Europe/Zurich
+    REDIS_URL: redis://redis:6379
+  resources:
+    requests:
+      cpu: 10m
+      memory: 16Mi
+    limits:
+      memory: 64Mi
+  service:
+    nodePort: 30090

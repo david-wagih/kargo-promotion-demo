@@ -1,0 +1,6 @@
+app:
+  replicas: 1
+  env:
+    ENV_NAME: dev
+    BANNER_COLOR: "#2e7d32"
+    GREETING: deployed to the dev cluster

@@ -1,0 +1,14 @@
+app:
+  name: ""
+  image: ""
+  version: ""          # set per promotion by Kargo (real setup: written into <env>-values.yaml)
+  replicas: 1
+  port: 8080
+  env: {}
+  health:
+    enabled: true
+    path: /healthz
+  resources: {}
+  service:
+    port: 80
+    nodePort: null

@@ -1,0 +1,25 @@
+# Same shape as swisscom/tde-team-green-sandbox/development/config-tde-dev5/config.yaml
+# (real spaces there: dev5, prod, prod-2; the demo uses the generic dev, staging, prod).
+# In the real setup the cicd/cd promotion component reads this file. In this demo
+# Kargo does the promotion, and kargo/30-stages.yaml mirrors these spaces 1:1:
+#   dev     -> auto-promoted        (manual-promotion: false)
+#   staging -> one click in Kargo   (manual-promotion: false)
+#   prod    -> Kargo opens an MR    (manual-promotion: true + reviewers)
+project: dev5
+spaces:
+  dev:
+    cluster: gl-dev              # kind clusters on the laptop (real: one EKS cluster per space)
+    argocd-server: localhost:8091
+  staging:
+    cluster: gl-staging
+    argocd-server: localhost:8092
+  prod:
+    cluster: gl-prod
+    argocd-server: localhost:8093
+    manual-promotion: true
+    reviewers:
+      apps: []                  # gitlab usernames, as in config-tde-mtxaps
+cd:
+  apps:
+    demo-app: {}                # pattern "helm": charts/microservice + apps/demo-app/<env>-values.yaml
+    redis: {}                   # pattern "kustomize": apps/redis/base + overlays/<env>

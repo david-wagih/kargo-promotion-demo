@@ -1,0 +1,36 @@
+# Used only by argocd-diff-preview (.gitlab-ci.yml): renders demo-app for staging the
+# way Argo CD would, so every MR shows its real impact on staging before merge.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: demo-app-staging
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://gitlab.com/__GITLAB_GROUP__/config-tde-dev5.git
+    targetRevision: main
+    path: charts/microservice
+    helm:
+      releaseName: demo-app
+      valueFiles:
+        - ../../apps/demo-app/values.yaml
+        - ../../apps/demo-app/staging-values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: demo-app
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: redis-staging
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://gitlab.com/__GITLAB_GROUP__/config-tde-dev5.git
+    targetRevision: main
+    path: apps/redis/overlays/staging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: demo-app

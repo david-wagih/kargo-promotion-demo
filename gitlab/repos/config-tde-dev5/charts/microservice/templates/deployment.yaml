@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.app.name }}
+  labels:
+    app: {{ .Values.app.name }}
+spec:
+  replicas: {{ .Values.app.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.app.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.app.name }}
+    spec:
+      containers:
+        - name: {{ .Values.app.name }}
+          image: "{{ .Values.app.image }}:{{ .Values.app.version | default "latest" }}"
+          ports:
+            - containerPort: {{ .Values.app.port }}
+          {{- with .Values.app.env }}
+          env:
+            {{- range $k, $v := . }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          {{- end }}
+          {{- if .Values.app.health.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.app.health.path }}
+              port: {{ .Values.app.port }}
+          {{- end }}
+          {{- with .Values.app.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}

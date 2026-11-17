@@ -1,0 +1,17 @@
+# One Kargo Project per config repo / account: dev5.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: dev5
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: dev5
+  namespace: dev5
+spec:
+  promotionPolicies:
+    # dev follows main automatically; staging and prod are deliberate.
+    - stageSelector:
+        name: dev
+      autoPromotionEnabled: true
