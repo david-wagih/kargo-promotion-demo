@@ -38,30 +38,7 @@ existing env repos without touching the clusters.
 | kind `gl-mgmt` | Kargo |
 | kind `gl-dev`, `gl-staging`, `gl-prod` | one Argo CD each, watching only its own env repo |
 
-```mermaid
-flowchart LR
-  subgraph GL["gitlab.com / <group>"]
-    APP["demo-app<br/>CI: build-image"] -->|push| REG[(registry demo-app:x.y.z)]
-    SRC["config-tde-dev5<br/>values + kustomize"]
-    REN["CI: renovate"] -->|upgrade MRs| SRC
-    SRC -. every MR .-> ADP["CI: argocd-diff-preview<br/>rendered diff as MR note"]
-    E1[config-tde-dev5-dev]
-    E2[config-tde-dev5-staging]
-    E3[config-tde-dev5-prod]
-  end
-  subgraph MGMT["gl-mgmt: Kargo"]
-    WH[Warehouse] --> F((Freight))
-    F --> S1[dev<br/>auto] --> S2[staging<br/>click] --> S3[prod<br/>MR]
-  end
-  REG --> WH
-  SRC --> WH
-  S1 -->|render + push| E1
-  S2 -->|render + push| E2
-  S3 -->|render + open MR| E3
-  E1 --> A1["gl-dev<br/>Argo CD"]
-  E2 --> A2["gl-staging<br/>Argo CD"]
-  E3 --> A3["gl-prod<br/>Argo CD"]
-```
+Architecture diagram: [kargo-demo on Excalidraw](https://app.excalidraw.com/s/3NqPjPnhAl/4VJRLKIZOJt)
 
 ## Setup
 
